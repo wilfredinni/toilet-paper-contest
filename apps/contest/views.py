@@ -1,7 +1,7 @@
 import random
 
 from rest_framework import viewsets
-from django.db.models import Max
+from rest_framework.permissions import IsAdminUser
 
 from ..users.models import CustomUser
 from .serializers import UserSerializer
@@ -9,6 +9,7 @@ from .serializers import UserSerializer
 
 class ContestWinnerViewset(viewsets.ModelViewSet):
     serializer_class = UserSerializer
+    permission_classes = (IsAdminUser,)
     http_method_names = ["get"]
 
     def get_queryset(self):
@@ -18,4 +19,7 @@ class ContestWinnerViewset(viewsets.ModelViewSet):
         )
 
         # more performant than .order_by("?")[:1]
-        return [random.choice(queryset)]
+        if queryset:
+            return [random.choice(queryset)]
+
+        return queryset
