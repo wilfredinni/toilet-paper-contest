@@ -5,7 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 
 class CustomUser(AbstractUser):
     email = models.EmailField(_("email address"), unique=True)
-    bio = models.TextField(max_length=500, blank=True)
+    bio = models.TextField(max_length=500, blank=True, null=True)
     phone = models.CharField(max_length=15)
     address = models.CharField(max_length=100)
 
