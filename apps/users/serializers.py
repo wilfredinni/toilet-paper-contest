@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .tasks import send_activation_mail
 from ..users.models import CustomUser
 
 
@@ -33,6 +34,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         new_user.is_active = False
         new_user.save()
+        send_activation_mail.delay()
 
         return new_user
 
