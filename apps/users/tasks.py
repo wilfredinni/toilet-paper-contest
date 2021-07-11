@@ -1,18 +1,22 @@
 from celery import shared_task
 
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
 from apps.users.models import CustomUser
 
 
-def generate_email_data(user_id):
+def generate_activation_email_data(user_id):
     user = CustomUser.objects.get(id=user_id)
     refresh_token = RefreshToken.for_user(user)
-    # TODO frontend url from env variales
-    frontend_activation_url = f"http://confortdeporvida.cl/account-activation/?token={refresh_token}&user_id={user_id}"
+    activation_url = settings.ACCOUNT_ACTIVATION_URL
+    frontend_activation_url = (
+        f"{activation_url}?token={refresh_token}&user_id={user_id}"
+    )
     return {
         "user": user,
         "activation_url": frontend_activation_url,
@@ -20,8 +24,8 @@ def generate_email_data(user_id):
 
 
 @shared_task
-def send_activation_mail(user_id):
-    activation_data = generate_email_data(user_id)
+def send_activation_email(user_id):
+    activation_data = generate_activation_email_data(user_id)
 
     text_template = get_template("email/activation_email.txt")
     html_template = get_template("email/activation_email.html")
@@ -36,7 +40,7 @@ def send_activation_mail(user_id):
     email = EmailMultiAlternatives(
         "Estas a un paso de Ganar!",
         text_message,
-        "carlos.w.montecinos@gmail.com",  # TODO get sender from .env
+        settings.EMAIL_HOST_USER,
         [activation_data.get("user").email],
     )
     email.attach_alternative(html_message, "text/html")

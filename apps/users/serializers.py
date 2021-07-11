@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from django.conf import settings
 
-from .tasks import send_activation_mail
+from .tasks import send_activation_email
 from ..users.models import CustomUser
 
 
@@ -30,7 +30,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["is_active"] = False
         new_user = CustomUser.objects.create(**validated_data)
-        send_activation_mail.delay(new_user.id)
+        send_activation_email.delay(new_user.id)
         return new_user
 
 
@@ -57,7 +57,7 @@ class UserActivationSerializer(serializers.ModelSerializer):
         try:
             # get and validate the token
             token = self.context["request"].query_params.get("token")
-            jwt.decode(token, settings.SECRET_KEY)
+            jwt.decode(token, settings.SECRET_KEY, algorithms="HS256")
 
             # set the user password and activate the account
             new_password = validated_data.get("password")
