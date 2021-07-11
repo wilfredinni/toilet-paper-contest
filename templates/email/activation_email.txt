@@ -1,0 +1,5 @@
+Querido(a) {{email_data.user.username}}
+
+Activa tu cuenta y gana una dotación de por vida del mejor y más suave Papel Higiénico!
+
+{{email_data.activation_url}}

@@ -1,6 +1,7 @@
 from celery import shared_task
 
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import get_template
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -13,26 +14,30 @@ def generate_email_data(user_id):
     # TODO frontend url from env variales
     frontend_activation_url = f"http://confortdeporvida.cl/account-activation/?token={refresh_token}&user_id={user_id}"
     return {
-        "user_id": user.id,
-        "username": user.username,
-        "user_email": user.email,
+        "user": user,
         "activation_url": frontend_activation_url,
     }
-    # return {
-    #     "subject": "Welcome to the site",
-    #     "message": "You have successfully registered to our site",
-    #     "from_email": "carlos.w.montecinos@gmail.com",
-    #     "recipient_list": ["carlos.w.montecinos@gmail.com"],
-    # }
 
 
 @shared_task
 def send_activation_mail(user_id):
-    data = generate_email_data(user_id)
-    send_mail(
-        "title",
-        data.get("activation_url"),
-        "carlos.w.montecinos@gmail.com",
-        [data.get("user_email")],
+    activation_data = generate_email_data(user_id)
+
+    text_template = get_template("email/activation_email.txt")
+    html_template = get_template("email/activation_email.html")
+
+    email_context = {
+        "email_data": activation_data,
+    }
+
+    text_message = text_template.render(email_context)
+    html_message = html_template.render(email_context)
+
+    email = EmailMultiAlternatives(
+        "Estas a un paso de Ganar!",
+        text_message,
+        "carlos.w.montecinos@gmail.com",  # TODO get sender from .env
+        [activation_data.get("user").email],
     )
-    return None
+    email.attach_alternative(html_message, "text/html")
+    email.send()
