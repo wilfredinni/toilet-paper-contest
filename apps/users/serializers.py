@@ -1,4 +1,8 @@
+import jwt
+
 from rest_framework import serializers
+
+from django.conf import settings
 
 from .tasks import send_activation_mail
 from ..users.models import CustomUser
@@ -8,6 +12,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
+            "id",
             "username",
             "email",
             "first_name",
@@ -16,26 +21,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "address",
             "bio",
         ]
+        read_only_fields = ["id"]
         extra_kwargs = {
             "first_name": {"required": True},
             "last_name": {"required": True},
         }
 
     def create(self, validated_data):
-        new_user = CustomUser.objects.create(
-            username=validated_data.get("username"),
-            email=validated_data.get("email"),
-            first_name=validated_data.get("first_name"),
-            last_name=validated_data.get("last_name"),
-            phone=validated_data.get("phone"),
-            address=validated_data.get("address"),
-            bio=validated_data.get("bio"),
-        )
-
-        new_user.is_active = False
-        new_user.save()
-        send_activation_mail.delay()
-
+        validated_data["is_active"] = False
+        new_user = CustomUser.objects.create(**validated_data)
+        send_activation_mail.delay(new_user.id)
         return new_user
 
 
@@ -59,8 +54,18 @@ class UserActivationSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
-        password = validated_data.get("password")
-        instance.set_password(password)
-        instance.is_active = True
-        instance.save()
-        return instance
+        try:
+            # get and validate the token
+            token = self.context["request"].query_params.get("token")
+            jwt.decode(token, settings.SECRET_KEY)
+
+            # set the user password and activate the account
+            new_password = validated_data.get("password")
+            instance.set_password(new_password)
+            instance.is_active = True
+            instance.save()
+
+            return instance
+
+        except (jwt.ExpiredSignatureError, jwt.DecodeError, jwt.InvalidTokenError):
+            raise serializers.ValidationError({"token": "Token is missing or invalid."})
