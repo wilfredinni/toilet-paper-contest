@@ -17,9 +17,10 @@ class ContestWinnerViewset(viewsets.ModelViewSet):
         # seems to be the more performant solution
         # https://books.agiliq.com/projects/django-orm-cookbook/en/latest/random.html
         # ugly but effective !!!
-        max_id = CustomUser.objects.aggregate(max_id=Max("id"))["max_id"]
-        while True:
-            pk = random.randint(1, max_id)
-            user = CustomUser.objects.filter(pk=pk).first()
-            if user and user.is_active and not user.is_staff and not user.is_superuser:
-                return [user]
+        eligible_users = CustomUser.objects.filter(
+            is_active=True, is_staff=False, is_superuser=False
+        )
+        max_id = eligible_users.aggregate(max_id=Max("id"))["max_id"]
+        pk = random.randint(1, max_id)
+        user = eligible_users.filter(pk=pk)
+        return user
