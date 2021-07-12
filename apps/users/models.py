@@ -11,3 +11,12 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    @staticmethod
+    def activate_account(user_instance, validated_data):
+        new_password = validated_data.get("password")
+        user_instance.set_password(new_password)
+        user_instance.is_active = True
+        user_instance.save()
+
+        return user_instance

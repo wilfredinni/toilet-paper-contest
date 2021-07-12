@@ -1,11 +1,8 @@
-import jwt
-
 from rest_framework import serializers
 
-from django.conf import settings
-
+from apps.users.models import CustomUser
+from .validators import password_validator, token_validator
 from .tasks import send_activation_email
-from ..users.models import CustomUser
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -41,31 +38,14 @@ class UserActivationSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ["username", "email", "password", "password2", "is_active"]
         read_only_fields = ["is_active", "email", "username"]
-        extra_kwargs = {
-            "password": {"write_only": True},
-        }
+        extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, attrs):
-        if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
-            )
-
+        token = self.context["request"].query_params.get("token")
+        password_validator(attrs)
+        token_validator(token)
         return attrs
 
     def update(self, instance, validated_data):
-        try:
-            # get and validate the token
-            token = self.context["request"].query_params.get("token")
-            jwt.decode(token, settings.SECRET_KEY, algorithms="HS256")
-
-            # set the user password and activate the account
-            new_password = validated_data.get("password")
-            instance.set_password(new_password)
-            instance.is_active = True
-            instance.save()
-
-            return instance
-
-        except (jwt.ExpiredSignatureError, jwt.DecodeError, jwt.InvalidTokenError):
-            raise serializers.ValidationError({"token": "Token is missing or invalid."})
+        user_instance = CustomUser.activate_account(instance, validated_data)
+        return user_instance
