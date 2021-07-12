@@ -31,9 +31,17 @@ $ docker-compose run app python manage.py createsuperuser
 $ docker-compose up
 ```
 
+Si lo deseas, puedes generar usuarios en masa con el siguiente comando
+
+```bash
+$ docker-compose run app python manage.py seed users --number=1000
+```
+
+> Es probable que durante la ejecución de este comando se genere el error: `DETAIL: Key (username)=(umyers) already exists.`. Simplemente vuelve a ejecutarlo hasta obtener un número considerable de usuarios que permitan probar el desempeño de la solución.
+
 ## Endpoints
 
-```url
+```
 http://127.0.0.1:8000/api
 ```
 
@@ -89,7 +97,7 @@ Al momento de registrarse, se enviará un correo electrónico a la dirección de
 http://fontend-url/account-activation/?token=superweirdtoken&user_id=22
 ```
 
-El desarrollar frontend debe capturar el **token** y el **user_id** desde los parámetros de la url y enviar una nueva petición para activar la cuenta del usuario:
+El desarrollador frontend deberá capturar el **token** y el **user_id** desde los parámetros de la url y enviar una nueva petición para activar la cuenta del usuario:
 
 ```
 PUT /accounts/activate/{user_id}/?token={token}
